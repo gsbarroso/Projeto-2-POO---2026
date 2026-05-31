@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+*.sqlite3
+*.db
+*.log
+save_dino.json
+*.egg-info/
+.DS_Store
+Thumbs.db
