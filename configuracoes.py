@@ -19,11 +19,25 @@ AMARELO = (255, 215, 0)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
-DINO_VARIANTS = [
-    os.path.join(ASSETS_DIR, "Espadão.png"),
-    os.path.join(ASSETS_DIR, "Motoserra.png"),
-    os.path.join(ASSETS_DIR, "Shuriken.png"),
-]
+DINO_CLASSICO = os.path.join(ASSETS_DIR, "Classico.png")
+DINO_VARIANTS = {
+    "classico": os.path.join(ASSETS_DIR, "Classico.png"),
+    "espadao": os.path.join(ASSETS_DIR, "Espadão.png"),
+    "motoserra": os.path.join(ASSETS_DIR, "Motoserra.png"),
+    "shuriken": os.path.join(ASSETS_DIR, "Shuriken.png"),
+}
+PROJETIL_IMAGE = os.path.join(ASSETS_DIR, "Projetil.png")
+DINO_PRECOS = {
+    "classico": 0,
+    "espadao": 100,
+    "motoserra": 100,
+    "shuriken": 175,
+}
+LOJA_ITENS = {
+    "vida": {"preco": 50, "nome": "Vida Extra"},
+    "velocidade": {"preco": 75, "nome": "Velocidade Boost"},
+    "pulo": {"preco": 75, "nome": "Pulo Boost"},
+}
 CACTO_IMAGE = os.path.join(ASSETS_DIR, "cacto.png")
 PTERO_IMAGE = os.path.join(ASSETS_DIR, "pterodáctilo.png")
 ARQUIVO_SAVE = 'save_dino.json'
@@ -57,7 +71,7 @@ def carregar_sprite(caminho, largura, altura):
         ]
         pygame.draw.polygon(superficie, AZUL, pontos)
     else:
-        pygame.draw.rect(superficie, VERDE, (0, altura * 0.25, largura, altura * 0.75), border_radius=8)
+        pygame.draw.rect(superficie, VERDE, (0, altura * 0.25, largura, altura * 0.75), border_radius=4)
         pygame.draw.circle(superficie, PRETO, (largura // 2, altura // 3), largura // 8)
 
     return superficie

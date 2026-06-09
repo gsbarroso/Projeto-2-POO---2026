@@ -10,13 +10,13 @@ from configuracoes import *
 # 1. CLASSE ABSTRATA
 class EntidadeDoJogo(ABC):
     def __init__(self, x, y, largura, altura, cor):
-        # A hitbox principal no Pygame é o Rect
         self.rect = pygame.Rect(x, y, largura, altura)
         self.cor = cor
-        self.hitbox = self.rect.copy()
+        self.mask = None
 
     def atualizar_hitbox(self):
-        self.hitbox.topleft = self.rect.topleft
+        # A colisão por máscara não precisa de hitbox separada.
+        pass
 
     @abstractmethod
     def atualizar(self):
@@ -29,26 +29,34 @@ class EntidadeDoJogo(ABC):
         pass
 
     def checar_colisao(self, outra_entidade):
-        return self.hitbox.colliderect(outra_entidade.hitbox)
+        if self.mask is not None and outra_entidade.mask is not None:
+            offset = (outra_entidade.rect.x - self.rect.x, outra_entidade.rect.y - self.rect.y)
+            return self.mask.overlap(outra_entidade.mask, offset) is not None
+        return self.rect.colliderect(outra_entidade.rect)
 
 # 2. CLASSE DO JOGADOR
 class Dinossauro(EntidadeDoJogo):
-    def __init__(self):
-        self.image = carregar_sprite(random.choice(DINO_VARIANTS), 160, 160)
+    def __init__(self, variante="classico"):
+        self.variante = variante
+        dino_path = DINO_VARIANTS.get(variante, DINO_VARIANTS["classico"])
+        self.image = carregar_sprite(dino_path, 140, 140)
         largura, altura = self.image.get_size()
         chao_y = ALTURA_TELA - altura - 30
         super().__init__(50, chao_y, largura, altura, VERDE)
         self.rect = self.image.get_rect(topleft=(50, chao_y))
-        self.hitbox = self.rect.inflate(-32, -32)
+        self.mask = pygame.mask.from_surface(self.image)
         self.vel_y = 0
-        self.gravidade = 0.8
-        self.forca_pulo = -15
+        self.gravidade = 0.98
+        self.forca_pulo = -20
         self.chao_y = chao_y
         self.no_chao = True
+        self.vidas = 1
+        self.velocidade_boost = 1.0
+        self.pulo_boost = 1.0
 
     def pular(self):
         if self.no_chao:
-            self.vel_y = self.forca_pulo
+            self.vel_y = self.forca_pulo * self.pulo_boost
             self.no_chao = False
 
     def atualizar(self):
@@ -89,21 +97,21 @@ class Obstaculo(EntidadeDoJogo):
 
 class Cacto(Obstaculo):
     def __init__(self, velocidade):
-        self.image = carregar_sprite(CACTO_IMAGE, 90, 150)
+        self.image = carregar_sprite(CACTO_IMAGE, 80, 80)
         largura, altura = self.image.get_size()
         y = ALTURA_TELA - altura - 30
         super().__init__(LARGURA_TELA, y, largura, altura, VERMELHO, velocidade)
         self.rect = self.image.get_rect(topleft=(LARGURA_TELA, y))
-        self.hitbox = self.rect.inflate(-16, -24)
+        self.mask = pygame.mask.from_surface(self.image)
 
 class Pterodactilo(Obstaculo):
     def __init__(self, velocidade):
-        self.image = carregar_sprite(PTERO_IMAGE, 180, 120)
+        self.image = carregar_sprite(PTERO_IMAGE, 140, 120)
         largura, altura = self.image.get_size()
         y = random.choice([ALTURA_TELA - 130, ALTURA_TELA - 170])
         super().__init__(LARGURA_TELA, y, largura, altura, AZUL, velocidade)
         self.rect = self.image.get_rect(topleft=(LARGURA_TELA, y))
-        self.hitbox = self.rect.inflate(-32, -20)
+        self.mask = pygame.mask.from_surface(self.image)
         self.direcao_y = 1
 
     def atualizar(self):
@@ -112,3 +120,20 @@ class Pterodactilo(Obstaculo):
         self.rect.y += self.direcao_y
         if self.rect.y % 40 == 0: # Inverte a direção a cada 40 pixels
             self.direcao_y *= -1
+
+
+class Projetil(EntidadeDoJogo):
+    def __init__(self, x, y):
+        self.image = carregar_sprite(PROJETIL_IMAGE, 40, 40)
+        largura, altura = self.image.get_size()
+        super().__init__(x, y - altura // 2, largura, altura, AMARELO)
+        self.rect = self.image.get_rect(topleft=(x, y - altura // 2))
+        self.mask = pygame.mask.from_surface(self.image)
+        self.velocidade = 12
+
+    def atualizar(self):
+        self.rect.x += self.velocidade
+        self.atualizar_hitbox()
+
+    def desenhar(self, tela):
+        tela.blit(self.image, self.rect)
