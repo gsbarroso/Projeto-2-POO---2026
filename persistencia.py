@@ -1,41 +1,40 @@
-import pygame
-import sys
 import json
 import os
-import random
-from abc import ABC, abstractmethod
 from configuracoes import ARQUIVO_SAVE
+
 # =====================================================================
-# ARQUIVO: persistencia.py (Sugestão de divisão futura)
-# Objetivo: Lidar exclusivamente com a base de dados JSON.
+# ARQUIVO: persistencia.py
+# Objetivo: Lidar exclusivamente com a base de dados JSON e evitar corrupção.
 # =====================================================================
 class BancoDeDados:
     @staticmethod
     def carregar_dados():
-        if not os.path.exists(ARQUIVO_SAVE):
-            dados = {
-                "moedas": 0,
-                "pontos_acumulados": 0,
-                "dinossauro_selecionado": "classico",
-                "dinossauros_desbloqueados": ["classico"],
-                "itens_disponiveis": {"vida": 0, "velocidade": 0, "pulo": 0}
-            }
-            BancoDeDados.salvar_dados(dados)
-            return dados
-        
-        with open(ARQUIVO_SAVE, 'r') as f:
-            dados = json.load(f)
+        dados_padrao = {
+            "moedas": 100, # Inicia com 100 para testes
+            "pontos_acumulados": 0,
+            "dinossauro_selecionado": "classico",
+            "dinossauros_desbloqueados": ["classico"],
+            "itens_disponiveis": {"vida": 0, "velocidade": 0, "pulo": 0}
+        }
 
+        if not os.path.exists(ARQUIVO_SAVE):
+            BancoDeDados.salvar_dados(dados_padrao)
+            return dados_padrao
+        
+        try:
+            with open(ARQUIVO_SAVE, 'r') as f:
+                dados = json.load(f)
+        except (json.JSONDecodeError, FileNotFoundError):
+            print("[AVISO] Arquivo de save corrompido ou não lido. Restaurando padrão.")
+            return dados_padrao
+
+        # Merge de chaves novas
         alterado = False
-        if "dinossauro_selecionado" not in dados:
-            dados["dinossauro_selecionado"] = "classico"
-            alterado = True
-        if "dinossauros_desbloqueados" not in dados:
-            dados["dinossauros_desbloqueados"] = ["classico"]
-            alterado = True
-        if "itens_disponiveis" not in dados:
-            dados["itens_disponiveis"] = {"vida": 0, "velocidade": 0, "pulo": 0}
-            alterado = True
+        for key, value in dados_padrao.items():
+            if key not in dados:
+                dados[key] = value
+                alterado = True
+
         if alterado:
             BancoDeDados.salvar_dados(dados)
 
@@ -43,5 +42,8 @@ class BancoDeDados:
 
     @staticmethod
     def salvar_dados(dados):
-        with open(ARQUIVO_SAVE, 'w') as f:
-            json.dump(dados, f, indent=4)
+        try:
+            with open(ARQUIVO_SAVE, 'w') as f:
+                json.dump(dados, f, indent=4)
+        except Exception as e:
+            print(f"[ERRO] Não foi possível salvar o progresso: {e}")
