@@ -70,11 +70,14 @@ class JogoView:
         y = 100
         precos = modelo.gerenciador_loja.PRECOS_DINOSSAURO
         for idx, (dino, preco) in enumerate(precos.items()):
-            possui = "✓" if modelo.gerenciador_loja.dinossauro_desbloqueado(dino) else f""
+            # Se já possui o dino mostra '✓', senão mostra o preço
+            status = "✓" if modelo.gerenciador_loja.dinossauro_desbloqueado(dino) else f"${preco}"
+            
             if modelo.obter_dino_selecionado() == dino.value:
-                possui = "[EQUIPADO]"
+                status = "[EQUIPADO]"
+                
             cor_item = cfg.VERDE if idx == modelo.menu_opcao else cor
-            self._render_texto(f"{'▶' if idx == modelo.menu_opcao else ' '} {dino.value.upper()}: {possui}", 
+            self._render_texto(f"{'▶' if idx == modelo.menu_opcao else ' '} {dino.value.upper()}: {status}", 
                              50, y, cor_item, self.fonte)
             y += 30
         
@@ -89,13 +92,15 @@ class JogoView:
             nomes = modelo.gerenciador_consumivel.NOMES_CONSUMIVEL[tipo]
             global_idx = idx + len(precos)
             cor_item = cfg.VERDE if global_idx == modelo.menu_opcao else cor
-            self._render_texto(f"{'▶' if global_idx == modelo.menu_opcao else ' '} {nomes}:  (x{qtd})", 
+            
+            #${preco} na string do texto
+            self._render_texto(f"{'▶' if global_idx == modelo.menu_opcao else ' '} {nomes} (${preco}) - Possui: {qtd}", 
                              50, y, cor_item, self.fonte)
             y += 30
 
     def _renderizar_jogo(self, modelo: 'JogoModel', cor: tuple) -> None:
         """Renderiza tela de jogo."""
-        pygame.draw.line(self.tela, cor, (0, cfg.LINHA_CHAO), (cfg.LARGURA_TELA, cfg.LINHA_CHAO), 2)
+        pygame.draw.line(self.tela, cor, (0, cfg.LINHA_CHAO - 4), (cfg.LARGURA_TELA, cfg.LINHA_CHAO - 4), 2)
         
         # Renderiza entidades
         if modelo.dino.image:

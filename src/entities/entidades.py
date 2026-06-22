@@ -107,30 +107,24 @@ class EntidadeDoJogo(Entidade, Colidivel, PossuiVisual):
 
 
 class Dinossauro(EntidadeDoJogo):
-    """Personagem jogável - dinossauro."""
-    
-    def __init__(self, variante: str = "classico"):
-        """
-        Inicializa o dinossauro.
-        
-        Args:
-            variante: Tipo de dinossauro (classico, espadao, motoserra, shuriken)
-        """
+    def __init__(self, variante="classico"):
         self.variante = variante
         dino_path = cfg.DINO_VARIANTS.get(variante, cfg.DINO_VARIANTS["classico"])
         
-        self.image_base = cfg.carregar_sprite(dino_path, escala=0.043, largura_fallback=240, 
-                                              altura_fallback=240, max_largura=240, max_altura=240)
+        self.image_base = cfg.carregar_sprite(dino_path, escala=0.043, largura_fallback=240, altura_fallback=240, max_largura=240, max_altura=240)
         self.largura_original = self.image_base.get_width()
         self.altura_original = self.image_base.get_height()
         
         super().__init__(50, 0, self.image_base, cfg.VERDE)
         
-        self.altura_visual_base = self.obter_altura_visual()
-        self.chao_y = cfg.LINHA_CHAO - self.altura_visual_base
-        self.y = self.chao_y  
+        # Calcula quantos pixels de espaço vazio (transparente) existem na base da imagem
+        self.padding_inferior = self.rect.height - self.obter_altura_visual()
         
-        self.vel_y = 0.0
+        # Empurra o limite do chão para baixo na proporção exata da transparência
+        self.chao_bottom = cfg.LINHA_CHAO + self.padding_inferior
+        self.rect.bottom = self.chao_bottom
+        
+        self.vel_y = 0
         self.gravidade = cfg.GRAVIDADE
         self.forca_pulo = cfg.FORCA_PULO
         
@@ -141,116 +135,102 @@ class Dinossauro(EntidadeDoJogo):
         self.pulo_boost = 1.0
 
     @property
-    def is_agachado(self) -> bool:
-        """Verifica se dinossauro está agachado."""
+    def is_agachado(self):
         return self._agachado
 
-    def processar_entrada(self, input_abaixar: bool) -> None:
-        """
-        Processa entrada do teclado.
-        
-        Args:
-            input_abaixar: True se tecla DOWN foi pressionada
-        """
+    def processar_entrada(self, input_abaixar):
         if input_abaixar:
             self.agachar()
         else:
             self.levantar()
 
-    def pular(self) -> None:
-        """Faz o dinossauro pular se estiver no chão."""
+    def pular(self):
         if self.no_chao:
             self.vel_y = self.forca_pulo * self.pulo_boost
             self.no_chao = False
 
-    def agachar(self) -> None:
-        """Agacha o dinossauro reduzindo sua altura e colando-o ao chão."""
+    def agachar(self):
         if not self._agachado and self.no_chao:
             self._agachado = True
             nova_altura = self.altura_original // 2
             nova_largura = int(self.largura_original * 1.2)
             
             self.image = pygame.transform.scale(self.image_base, (nova_largura, nova_altura))
-            # Atualiza o rect com o novo tamanho mantendo o pé dele grudado na posição correta
-            self.rect = self.image.get_rect(bottomleft=(self.rect.left, cfg.LINHA_CHAO))
             self.mask = pygame.mask.from_surface(self.image)
+            
+            # Recalcula o espaço vazio para a nova imagem amassada
+            self.padding_inferior = self.image.get_height() - self.obter_altura_visual()
+            self.chao_bottom = cfg.LINHA_CHAO + self.padding_inferior
+            self.rect = self.image.get_rect(bottomleft=(50, self.chao_bottom))
+            
+        elif not self.no_chao:
+            self.vel_y += cfg.QUEDA_AGACHADO
 
-    def levantar(self) -> None:
-        """Levanta o dinossauro voltando ao tamanho e posição normais."""
+    def levantar(self):
         if self._agachado:
             self._agachado = False
             self.image = self.image_base
-            # Restaura o rect original ancorando novamente a base ao chão
-            self.rect = self.image.get_rect(bottomleft=(self.rect.left, cfg.LINHA_CHAO))
             self.mask = pygame.mask.from_surface(self.image)
+            
+            # Restaura o espaço vazio da imagem original
+            self.padding_inferior = self.image.get_height() - self.obter_altura_visual()
+            self.chao_bottom = cfg.LINHA_CHAO + self.padding_inferior
+            self.rect = self.image.get_rect(bottomleft=(50, self.chao_bottom))
 
-    def atualizar(self) -> None:
-        """Atualiza posição e física do dinossauro a cada frame."""
-        self.vel_y += self.gravidade
-        self.y += self.vel_y
+    def atualizar(self):
+        if not self.no_chao:
+            self.vel_y += self.gravidade
+            self.rect.y += int(self.vel_y)
 
-        if self.y >= self.chao_y:
-            self.y = self.chao_y
-            self.vel_y = 0
-            self.no_chao = True
+            # Usa o limite calculado para parar a queda
+            if self.rect.bottom >= self.chao_bottom:
+                self.rect.bottom = self.chao_bottom
+                self.no_chao = True
+                self.vel_y = 0
 
 
 Obstaculo = EntidadeDoJogo
 
 
-class Cacto(EntidadeDoJogo):
-    """Obstáculo - cacto."""
-    
-    def __init__(self, velocidade: float = 8.0, offset_x: float = 0):
-        """
-        Inicializa um cacto.
-        
-        Args:
-            velocidade: Velocidade de movimento em pixels por frame
-            offset_x: Offset horizontal para múltiplos cactos
-        """
+class Cacto(Obstaculo):
+    def __init__(self, velocidade, offset_x=0):
         self.velocidade = velocidade
+        import random
+        escala_random = random.choice([0.035, 0.040, 0.045, 0.050])
+        imagem_cacto = cfg.carregar_sprite(cfg.CACTO_IMAGE, escala=escala_random, largura_fallback=200, altura_fallback=240, max_largura=240, max_altura=240)
         
-        caminho_cacto = cfg.ASSETS_DIR / "Cacto.png"
-        imagem = cfg.carregar_sprite(str(caminho_cacto), escala=0.05, 
-                                    largura_fallback=100, altura_fallback=100)
+        super().__init__(cfg.LARGURA_TELA + offset_x, 0, imagem_cacto, cfg.VERMELHO)
         
-        super().__init__(cfg.LARGURA_TELA + offset_x, 0, imagem, cfg.VERMELHO)
-        
-        self.altura_visual = self.obter_altura_visual()
-        self.rect.y = cfg.LINHA_CHAO - self.altura_visual
+        # Desconta a transparência para os pixels VISÍVEIS grudarem no chão
+        padding_inferior = self.rect.height - self.obter_altura_visual()
+        self.rect.bottom = cfg.LINHA_CHAO + padding_inferior
+        self.mask = pygame.mask.from_surface(self.image)
 
     def atualizar(self) -> None:
-        """Atualiza posição do cacto (movimento para esquerda)."""
-        self.x -= self.velocidade
+        self.rect.x -= int(self.velocidade)
 
 
-class Pterodactilo(EntidadeDoJogo):
-    """Obstáculo - pterodactilo voador."""
-    
+class Pterodactilo(Obstaculo):
     def __init__(self, velocidade: float = 8.0):
-        """
-        Inicializa um pterodactilo.
-        
-        Args:
-            velocidade: Velocidade de movimento em pixels por frame
-        """
         self.velocidade = velocidade
         
         caminho_ptero = cfg.ASSETS_DIR / "Pterodactilo.png"
         imagem = cfg.carregar_sprite(str(caminho_ptero), escala=0.045,
                                     largura_fallback=120, altura_fallback=80)
         
+        super().__init__(cfg.LARGURA_TELA, 0, imagem, cfg.AZUL)
+        
         import random
-        altura_idx = random.randint(0, 1)
+        altura_idx = random.randint(0, len(cfg.ALTURAS_PTERO) - 1)
         offset_y = cfg.ALTURAS_PTERO[altura_idx]
         
-        super().__init__(cfg.LARGURA_TELA, offset_y, imagem, cfg.AZUL)
+        # Desconta a transparência para ele voar na altura milimetricamente correta
+        padding_inferior = self.rect.height - self.obter_altura_visual()
+        self.rect.bottom = offset_y + padding_inferior
+        self.mask = pygame.mask.from_surface(self.image)
 
     def atualizar(self) -> None:
-        """Atualiza posição do pterodactilo (movimento para esquerda)."""
-        self.x -= self.velocidade
-
+        self.rect.x -= int(self.velocidade)
 
 class Projetil(EntidadeDoJogo):
     """Projetil lançado pelo dinossauro shuriken."""

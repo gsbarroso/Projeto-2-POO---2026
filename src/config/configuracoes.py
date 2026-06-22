@@ -27,11 +27,10 @@ INCREMENTO_VELOCIDADE: float = 1.2
 PONTOS_PARA_ACELERAR: int = 350
 TEMPO_RECARGA_ESPECIAL: int = 250
 VELOCIDADE_PROJETIL: int = 20
-# ALTURAS BASEADAS NA ESTRATÉGIA DE JOGABILIDADE TRADICIONAL
-# [0] Alto: passa por cima do dino em pé (pular causa colisão)
-# [1] Médio: exige que o dino agache para desviar
-# [2] Baixo: exige que o dino pule por cima (mesma dinâmica do cacto)
-ALTURAS_PTERO: list = [LINHA_CHAO - 130, LINHA_CHAO - 85, LINHA_CHAO - 45]
+# Define a posição do fundo (bottom) do Pterodáctilo em relação ao chão:
+# [0] Alto: voa bem alto (passa direto pelo dino em pé)
+# [1] Médio: voa a meia altura (obriga a agachar)
+ALTURAS_PTERO: list = [LINHA_CHAO - 110, LINHA_CHAO - 35]
 PADDING_COLISAO: int = 10
 
 # =====================================================================
