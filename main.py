@@ -1,23 +1,26 @@
-# =====================================================================
-# ARQUIVO: main.py
-# Objetivo: Ponto de entrada (Entry Point) da aplicação MVC
-# =====================================================================
+﻿import logging
 import pygame
 import sys
-from gerenciador import JogoController
+from src.controller.jogo_controller import JogoController
+
+# Configurar logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(levelname)s] %(name)s: %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+
+logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
+    logger.info("=== Iniciando Dino Run MVC ===")
     try:
-        # Inicializa o controlador principal que amarra o Model e a View
         controller = JogoController()
         controller.executar()
-        
     except Exception as e:
-        # Captura erros não previstos e exibe no console para debug
-        print(f"\n[ERRO FATAL] Ocorreu um problema durante a execução do jogo:")
-        print(f"Detalhes: {e}\n")
-        
+        logger.error(f"Erro fatal: {e}", exc_info=True)
     finally:
-        # Garante que os processos do Pygame sejam encerrados com segurança
+        logger.info("=== Jogo finalizado ===")
         pygame.quit()
-        sys.exit()

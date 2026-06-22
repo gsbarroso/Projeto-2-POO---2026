@@ -1,5 +1,6 @@
-import pygame
+﻿import pygame
 import os
+from pathlib import Path
 
 # =====================================================================
 # ARQUIVO: configuracoes.py
@@ -24,9 +25,20 @@ PONTOS_PARA_ACELERAR = 350
 TEMPO_RECARGA_ESPECIAL = 250
 VELOCIDADE_PROJETIL = 20
 
-# Offsets ajustados: 15 (força pular) e 50 (força agachar)
-# Removemos a altura de 100 para que o jogador nunca possa "passar direto"
-ALTURAS_PTERO = [15, 50]  
+# Offsets de altura para pterodactilo
+ALTURAS_PTERO = [15, 50]
+
+# Spawn de obstáculos
+PROB_CACTO = 0.6
+PROB_TRIO_CACTOS = 0.85
+PROB_DUPLA_CACTOS = 0.5
+MIN_TAXA_SPAWN = 30
+MAX_TAXA_SPAWN = 90
+VELOCIDADE_SPAWN_FACTOR = 3.5
+ESPACAMENTO_CACTOS = 35
+
+# Colisão
+PADDING_COLISAO = 8
 
 # Cores (RGB)
 BRANCO = (255, 255, 255)
@@ -38,25 +50,24 @@ AMARELO = (255, 215, 0)
 CINZA_ESCURO = (44, 62, 80)
 CINZA_CLARO = (236, 240, 241)
 
-# Caminhos Absolutos
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ASSETS_DIR = os.path.join(BASE_DIR, "assets")
+# Caminhos (usando pathlib para cross-platform)
+BASE_DIR = Path(__file__).parent
+ASSETS_DIR = BASE_DIR / "assets"
 
 DINO_VARIANTS = {
-    "classico": os.path.join(ASSETS_DIR, "Classico.png"),
-    "espadao": os.path.join(ASSETS_DIR, "Espadão.png"),
-    "motoserra": os.path.join(ASSETS_DIR, "Motoserra.png"),
-    "shuriken": os.path.join(ASSETS_DIR, "Shuriken.png"),
+    "classico": str(ASSETS_DIR / "Classico.png"),
+    "espadao": str(ASSETS_DIR / "Espadão.png"),
+    "motoserra": str(ASSETS_DIR / "Motoserra.png"),
+    "shuriken": str(ASSETS_DIR / "Shuriken.png"),
 }
-PROJETIL_IMAGE = os.path.join(ASSETS_DIR, "Projetil.png")
-CACTO_IMAGE = os.path.join(ASSETS_DIR, "Cacto.png")
-PTERO_IMAGE = os.path.join(ASSETS_DIR, "Pterodáctilo.png")
-ARQUIVO_SAVE = os.path.join(BASE_DIR, 'save_dino.json')
+
+ARQUIVO_SAVE = str(BASE_DIR / "save_dino.json")
 
 # =====================================================================
 # CACHE DE IMAGENS
 # =====================================================================
 _CACHE_IMAGENS = {}
+
 
 def carregar_sprite(caminho, escala=1.0, largura_fallback=50, altura_fallback=50, max_largura=None, max_altura=None):
     """Carrega imagem de sprite com sistema de cache para evitar lag I/O."""
@@ -86,9 +97,9 @@ def carregar_sprite(caminho, escala=1.0, largura_fallback=50, altura_fallback=50
             _CACHE_IMAGENS[chave_cache] = imagem
             return imagem
         except Exception as e:
-            print(f"[ERRO] Falha ao processar a imagem '{caminho}': {e}")
+            print(f"[ERRO] Falha ao processar a imagem {caminho}: {e}")
     else:
-        print(f"[AVISO] Imagem não encontrada: '{caminho}'.")
+        print(f"[AVISO] Imagem não encontrada: {caminho}")
 
     # Fallback
     superficie = pygame.Surface((largura_fallback, altura_fallback), pygame.SRCALPHA)
