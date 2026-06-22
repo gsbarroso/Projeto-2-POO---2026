@@ -6,7 +6,7 @@ from src.entities.entidades import Dinossauro, Projetil
 from src.services.fabrica_obstaculos import FabricaObstaculos
 from src.repository.repositorio_dados import RepositorioDados
 from src.exceptions import SaldoInsuficienteError, ItemInvalidoError, PersistenciaError
-import configuracoes as cfg
+from src.config import configuracoes as cfg
 
 logger = logging.getLogger(__name__)
 

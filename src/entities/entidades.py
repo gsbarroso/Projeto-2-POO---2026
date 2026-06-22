@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Tuple, Optional
 
-import configuracoes as cfg
+from src.config import configuracoes as cfg
 
 logger = logging.getLogger(__name__)
 
@@ -164,19 +164,25 @@ class Dinossauro(EntidadeDoJogo):
             self.no_chao = False
 
     def agachar(self) -> None:
-        """Agacha o dinossauro reduzindo sua altura."""
+        """Agacha o dinossauro reduzindo sua altura e colando-o ao chão."""
         if not self._agachado and self.no_chao:
             self._agachado = True
             nova_altura = self.altura_original // 2
             nova_largura = int(self.largura_original * 1.2)
             
             self.image = pygame.transform.scale(self.image_base, (nova_largura, nova_altura))
+            # Atualiza o rect com o novo tamanho mantendo o pé dele grudado na posição correta
+            self.rect = self.image.get_rect(bottomleft=(self.rect.left, cfg.LINHA_CHAO))
+            self.mask = pygame.mask.from_surface(self.image)
 
     def levantar(self) -> None:
-        """Levanta o dinossauro voltando ao tamanho normal."""
+        """Levanta o dinossauro voltando ao tamanho e posição normais."""
         if self._agachado:
             self._agachado = False
             self.image = self.image_base
+            # Restaura o rect original ancorando novamente a base ao chão
+            self.rect = self.image.get_rect(bottomleft=(self.rect.left, cfg.LINHA_CHAO))
+            self.mask = pygame.mask.from_surface(self.image)
 
     def atualizar(self) -> None:
         """Atualiza posição e física do dinossauro a cada frame."""
@@ -232,7 +238,7 @@ class Pterodactilo(EntidadeDoJogo):
         self.velocidade = velocidade
         
         caminho_ptero = cfg.ASSETS_DIR / "Pterodactilo.png"
-        imagem = cfg.carregar_sprite(str(caminho_ptero), escala=0.06,
+        imagem = cfg.carregar_sprite(str(caminho_ptero), escala=0.045,
                                     largura_fallback=120, altura_fallback=80)
         
         import random

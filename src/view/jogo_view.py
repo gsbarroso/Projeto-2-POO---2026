@@ -2,7 +2,7 @@
 import logging
 from typing import TYPE_CHECKING
 from src.utils.enums import EstadoJogo
-import configuracoes as cfg
+from src.config import configuracoes as cfg
 
 if TYPE_CHECKING:
     from src.model.jogo_model import JogoModel

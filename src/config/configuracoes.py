@@ -27,7 +27,12 @@ INCREMENTO_VELOCIDADE: float = 1.2
 PONTOS_PARA_ACELERAR: int = 350
 TEMPO_RECARGA_ESPECIAL: int = 250
 VELOCIDADE_PROJETIL: int = 20
-ALTURAS_PTERO: list = [15, 50]
+# ALTURAS BASEADAS NA ESTRATÉGIA DE JOGABILIDADE TRADICIONAL
+# [0] Alto: passa por cima do dino em pé (pular causa colisão)
+# [1] Médio: exige que o dino agache para desviar
+# [2] Baixo: exige que o dino pule por cima (mesma dinâmica do cacto)
+ALTURAS_PTERO: list = [LINHA_CHAO - 130, LINHA_CHAO - 85, LINHA_CHAO - 45]
+PADDING_COLISAO: int = 10
 
 # =====================================================================
 # CORES (RGB)

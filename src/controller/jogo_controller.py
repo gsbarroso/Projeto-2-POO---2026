@@ -6,7 +6,7 @@ from src.view.jogo_view import JogoView
 from src.controller.input_processor import InputProcessor
 from src.repository.repositorio_dados import RepositorioDadosJSON
 from src.utils.enums import EstadoJogo
-import configuracoes as cfg
+from src.config import configuracoes as cfg
 
 logger = logging.getLogger(__name__)
 
