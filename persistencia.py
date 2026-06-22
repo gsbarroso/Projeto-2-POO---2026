@@ -1,6 +1,6 @@
 import json
 import os
-from configuracoes import ARQUIVO_SAVE
+import configuracoes as cfg
 
 # =====================================================================
 # ARQUIVO: persistencia.py
@@ -17,12 +17,12 @@ class BancoDeDados:
             "itens_disponiveis": {"vida": 0, "velocidade": 0, "pulo": 0}
         }
 
-        if not os.path.exists(ARQUIVO_SAVE):
+        if not os.path.exists(cfg.ARQUIVO_SAVE):
             BancoDeDados.salvar_dados(dados_padrao)
             return dados_padrao
         
         try:
-            with open(ARQUIVO_SAVE, 'r') as f:
+            with open(cfg.ARQUIVO_SAVE, 'r') as f:
                 dados = json.load(f)
         except (json.JSONDecodeError, FileNotFoundError):
             print("[AVISO] Arquivo de save corrompido ou não lido. Restaurando padrão.")
@@ -43,7 +43,7 @@ class BancoDeDados:
     @staticmethod
     def salvar_dados(dados):
         try:
-            with open(ARQUIVO_SAVE, 'w') as f:
+            with open(cfg.ARQUIVO_SAVE, 'w') as f:
                 json.dump(dados, f, indent=4)
         except Exception as e:
             print(f"[ERRO] Não foi possível salvar o progresso: {e}")

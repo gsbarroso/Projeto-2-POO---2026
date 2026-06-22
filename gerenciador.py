@@ -1,7 +1,7 @@
 import pygame
 import sys
 import random
-from configuracoes import *
+import configuracoes as cfg
 from entidades import Dinossauro, Cacto, Pterodactilo, Projetil
 from persistencia import BancoDeDados
 
@@ -30,7 +30,7 @@ class JogoModel:
         self.obstaculos = []
         self.projetil = None
         self.pontuacao = 0
-        self.velocidade_jogo = 8.0
+        self.velocidade_jogo = cfg.VELOCIDADE_BASE_JOGO
         self.moedas_rodada = 0
         self.timer_spawn = 0
         self.ability_timer = 0
@@ -99,29 +99,29 @@ class JogoView:
 
     def renderizar(self, m):
         is_night = (m.estado in ["JOGANDO", "GAME_OVER", "PAUSADO"]) and ((m.pontuacao // 600) % 2 != 0)
-        bg_cor = CINZA_ESCURO if is_night else BRANCO
-        txt_cor = CINZA_CLARO if is_night else PRETO
+        bg_cor = cfg.CINZA_ESCURO if is_night else cfg.BRANCO
+        txt_cor = cfg.CINZA_CLARO if is_night else cfg.PRETO
 
         self.tela.fill(bg_cor)
 
         if m.estado == "MENU":
-            self._render_texto("DINO RUN MVC: EVOLUTION", LARGURA_TELA//2, ALTURA_TELA//2 - 60, txt_cor, self.fonte_grande, center=True)
-            self._render_texto("Pressione [ESPAÇO] para Iniciar", LARGURA_TELA//2, ALTURA_TELA//2, VERDE, self.fonte, center=True)
-            self._render_texto(f"Moedas: {m.dados_jogador['moedas']}", 20, 20, AMARELO, self.fonte)
-            self._render_texto("Pressione 'L' para Loja", LARGURA_TELA//2, ALTURA_TELA - 50, txt_cor, self.fonte, center=True)
+            self._render_texto("DINO RUN MVC: EVOLUTION", cfg.LARGURA_TELA//2, cfg.ALTURA_TELA//2 - 60, txt_cor, self.fonte_grande, center=True)
+            self._render_texto("Pressione [ESPAÇO] para Iniciar", cfg.LARGURA_TELA//2, cfg.ALTURA_TELA//2, cfg.VERDE, self.fonte, center=True)
+            self._render_texto(f"Moedas: {m.dados_jogador['moedas']}", 20, 20, cfg.AMARELO, self.fonte)
+            self._render_texto("Pressione 'L' para Loja", cfg.LARGURA_TELA//2, cfg.ALTURA_TELA - 50, txt_cor, self.fonte, center=True)
 
         elif m.estado == "LOJA":
-            self._render_texto("=== LOJA ===", LARGURA_TELA//2, 20, txt_cor, self.fonte_grande, center=True)
-            self._render_texto(f"Moedas: {m.dados_jogador['moedas']}", 20, 20, AMARELO, self.fonte)
+            self._render_texto("=== LOJA ===", cfg.LARGURA_TELA//2, 20, txt_cor, self.fonte_grande, center=True)
+            self._render_texto(f"Moedas: {m.dados_jogador['moedas']}", 20, 20, cfg.AMARELO, self.fonte)
             
             if m.mensagem_erro:
-                self._render_texto(f"⚠ {m.mensagem_erro}", 20, 60, VERMELHO, self.fonte_peq)
+                self._render_texto(f"⚠ {m.mensagem_erro}", 20, 60, cfg.VERMELHO, self.fonte_peq)
 
             y = 100
             for idx, (dino, preco) in enumerate(m.loja_precos.items()):
                 possui = "✓" if dino in m.dados_jogador["dinossauros_desbloqueados"] else f"${preco}"
                 if m.dados_jogador["dinossauro_selecionado"] == dino: possui = "[EQUIPADO]"
-                cor = VERDE if idx == m.menu_opcao else txt_cor
+                cor = cfg.VERDE if idx == m.menu_opcao else txt_cor
                 self._render_texto(f"{'▶' if idx == m.menu_opcao else ' '} {dino.upper()}: {possui}", 50, y, cor, self.fonte)
                 y += 30
             
@@ -130,43 +130,42 @@ class JogoView:
             for idx, (item, info) in enumerate(m.loja_itens.items()):
                 qtd = m.dados_jogador["itens_disponiveis"].get(item, 0)
                 global_idx = idx + len(m.loja_precos)
-                cor = VERDE if global_idx == m.menu_opcao else txt_cor
+                cor = cfg.VERDE if global_idx == m.menu_opcao else txt_cor
                 self._render_texto(f"{'▶' if global_idx == m.menu_opcao else ' '} {info['nome']}: ${info['preco']} (x{qtd})", 50, y, cor, self.fonte)
                 y += 30
 
         elif m.estado in ["JOGANDO", "GAME_OVER", "PAUSADO"]:
-            # A view não precisa mais fazer contas matemáticas complicadas de offset de máscara. 
-            # Como a POO tratou isso nos objetos, a linha do chão agora é fixa e perfeita.
-            pygame.draw.line(self.tela, txt_cor, (0, LINHA_CHAO), (LARGURA_TELA, LINHA_CHAO), 2)
+            pygame.draw.line(self.tela, txt_cor, (0, cfg.LINHA_CHAO), (cfg.LARGURA_TELA, cfg.LINHA_CHAO), 2)
             
             if m.dino.image: self.tela.blit(m.dino.image, m.dino.rect)
             for obs in m.obstaculos:
                 if hasattr(obs, 'image') and obs.image: self.tela.blit(obs.image, obs.rect)
             if m.projetil: self.tela.blit(m.projetil.image, m.projetil.rect)
             
-            self._render_texto(f"Pontos: {m.pontuacao}", LARGURA_TELA - 200, 20, txt_cor, self.fonte)
-            self._render_texto(f"Moedas: {m.moedas_rodada}", LARGURA_TELA - 200, 50, AMARELO, self.fonte)
-            self._render_texto(f"Vidas: {m.dino.vidas}", 20, 20, VERMELHO, self.fonte)
+            self._render_texto(f"Pontos: {m.pontuacao}", cfg.LARGURA_TELA - 200, 20, txt_cor, self.fonte)
+            self._render_texto(f"Moedas: {m.moedas_rodada}", cfg.LARGURA_TELA - 200, 50, cfg.AMARELO, self.fonte)
+            self._render_texto(f"Vidas: {m.dino.vidas}", 20, 20, cfg.VERMELHO, self.fonte)
             
             if m.dino.variante != "classico":
-                especial_txt = "Pronto (E)" if m.ability_ready else f"{(m.ability_timer/250)*100:.0f}%"
-                self._render_texto(f"Especial: {especial_txt}", 20, 50, AZUL, self.fonte_peq)
+                porcentagem = min(100, (m.ability_timer / cfg.TEMPO_RECARGA_ESPECIAL) * 100)
+                especial_txt = "Pronto (E)" if m.ability_ready else f"{porcentagem:.0f}%"
+                self._render_texto(f"Especial: {especial_txt}", 20, 50, cfg.AZUL, self.fonte_peq)
                 
             if m.ability_mensagem: 
                 self._render_texto(m.ability_mensagem, 20, 70, txt_cor, self.fonte_peq)
 
             if m.estado == "PAUSADO":
-                s = pygame.Surface((LARGURA_TELA, ALTURA_TELA), pygame.SRCALPHA)
+                s = pygame.Surface((cfg.LARGURA_TELA, cfg.ALTURA_TELA), pygame.SRCALPHA)
                 s.fill((0, 0, 0, 150))
                 self.tela.blit(s, (0,0))
-                self._render_texto("PAUSADO", LARGURA_TELA//2, ALTURA_TELA//2, BRANCO, self.fonte_grande, center=True)
+                self._render_texto("PAUSADO", cfg.LARGURA_TELA//2, cfg.ALTURA_TELA//2, cfg.BRANCO, self.fonte_grande, center=True)
 
             elif m.estado == "GAME_OVER":
-                s = pygame.Surface((LARGURA_TELA, ALTURA_TELA), pygame.SRCALPHA)
+                s = pygame.Surface((cfg.LARGURA_TELA, cfg.ALTURA_TELA), pygame.SRCALPHA)
                 s.fill((0, 0, 0, 200))
                 self.tela.blit(s, (0,0))
-                self._render_texto("GAME OVER", LARGURA_TELA//2, ALTURA_TELA//2 - 60, VERMELHO, self.fonte_grande, center=True)
-                self._render_texto("R: Reiniciar | L: Loja | M: Menu", LARGURA_TELA//2, ALTURA_TELA//2 + 40, BRANCO, self.fonte, center=True)
+                self._render_texto("GAME OVER", cfg.LARGURA_TELA//2, cfg.ALTURA_TELA//2 - 60, cfg.VERMELHO, self.fonte_grande, center=True)
+                self._render_texto("R: Reiniciar | L: Loja | M: Menu", cfg.LARGURA_TELA//2, cfg.ALTURA_TELA//2 + 40, cfg.BRANCO, self.fonte, center=True)
 
         pygame.display.flip()
 
@@ -184,7 +183,7 @@ class JogoView:
 class JogoController:
     def __init__(self):
         pygame.init()
-        tela = pygame.display.set_mode((LARGURA_TELA, ALTURA_TELA))
+        tela = pygame.display.set_mode((cfg.LARGURA_TELA, cfg.ALTURA_TELA))
         pygame.display.set_caption("Dino Run MVC: Hardcore Edition")
         
         self.relogio = pygame.time.Clock()
@@ -240,12 +239,12 @@ class JogoController:
         try:
             self.m.pontuacao += 1
             
-            if self.m.pontuacao % 350 == 0:
-                self.m.velocidade_jogo += 1.2
+            if self.m.pontuacao % cfg.PONTOS_PARA_ACELERAR == 0:
+                self.m.velocidade_jogo += cfg.INCREMENTO_VELOCIDADE
 
             if self.m.dino.variante != "classico":
                 self.m.ability_timer += 1
-                if self.m.ability_timer >= 250:
+                if self.m.ability_timer >= cfg.TEMPO_RECARGA_ESPECIAL:
                     self.m.ability_ready = True
 
             self.m.dino.processar_entrada(abaixar)
@@ -266,7 +265,7 @@ class JogoController:
 
             if self.m.projetil:
                 self.m.projetil.atualizar()
-                if self.m.projetil.x > LARGURA_TELA:
+                if self.m.projetil.x > cfg.LARGURA_TELA:
                     self.m.projetil = None
                 else:
                     for obs in self.m.obstaculos[:]:
@@ -318,7 +317,7 @@ class JogoController:
                 if self.m.estado == "JOGANDO":
                     self._atualizar_regras(abaixar)
                 self.v.renderizar(self.m)
-                self.relogio.tick(FPS)
+                self.relogio.tick(cfg.FPS)
             except SystemExit:
                 break
             except Exception as e:

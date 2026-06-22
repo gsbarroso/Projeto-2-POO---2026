@@ -1,7 +1,9 @@
 import pygame
 import random
 from abc import ABC, abstractmethod
-from configuracoes import *
+
+# Importando como módulo para respeitar a PEP 8 e manter o namespace limpo
+import configuracoes as cfg
 
 # =====================================================================
 # ARQUIVO: entidades.py
@@ -34,7 +36,6 @@ class EntidadeDoJogo(ABC):
 
     @abstractmethod
     def atualizar(self):
-        """Método padrão obrigatório para toda entidade."""
         pass
 
     def checar_colisao(self, outra_entidade):
@@ -52,23 +53,22 @@ class EntidadeDoJogo(ABC):
 class Dinossauro(EntidadeDoJogo):
     def __init__(self, variante="classico"):
         self.variante = variante
-        dino_path = DINO_VARIANTS.get(variante, DINO_VARIANTS["classico"])
+        dino_path = cfg.DINO_VARIANTS.get(variante, cfg.DINO_VARIANTS["classico"])
         
-        self.image_base = carregar_sprite(dino_path, escala=0.043, largura_fallback=240, altura_fallback=240, max_largura=240, max_altura=240)
+        self.image_base = cfg.carregar_sprite(dino_path, escala=0.043, largura_fallback=240, altura_fallback=240, max_largura=240, max_altura=240)
         self.largura_original = self.image_base.get_width()
         self.altura_original = self.image_base.get_height()
         
-        # Inicia temporariamente com y=0 para podermos processar a máscara visual
-        super().__init__(50, 0, self.image_base, VERDE)
+        super().__init__(50, 0, self.image_base, cfg.VERDE)
         
-        # Alinhamento perfeito do dino
         self.altura_visual_base = self.obter_altura_visual()
-        self.chao_y = LINHA_CHAO - self.altura_visual_base
-        self.y = self.chao_y  # Seta a posição Y definitiva
+        self.chao_y = cfg.LINHA_CHAO - self.altura_visual_base
+        self.y = self.chao_y  
         
         self.vel_y = 0
-        self.gravidade = 1.6
-        self.forca_pulo = -21
+        # Utilizando as constantes configuradas
+        self.gravidade = cfg.GRAVIDADE
+        self.forca_pulo = cfg.FORCA_PULO
         
         self.no_chao = True
         self._agachado = False
@@ -81,7 +81,6 @@ class Dinossauro(EntidadeDoJogo):
         return self._agachado
 
     def processar_entrada(self, input_abaixar):
-        """Responsável apenas por reagir aos inputs (Separation of Concerns)."""
         if input_abaixar:
             self.agachar()
         else:
@@ -101,12 +100,11 @@ class Dinossauro(EntidadeDoJogo):
             self.image = pygame.transform.scale(self.image_base, (nova_largura, nova_altura))
             self.mask = pygame.mask.from_surface(self.image)
             
-            # Re-alinha ao agachar para não flutuar nem afundar
             altura_visual_agachado = self.obter_altura_visual()
-            self.rect = self.image.get_rect(topleft=(self.x, LINHA_CHAO - altura_visual_agachado))
+            self.rect = self.image.get_rect(topleft=(self.x, cfg.LINHA_CHAO - altura_visual_agachado))
             
         elif not self.no_chao:
-            self.vel_y += 4
+            self.vel_y += cfg.QUEDA_AGACHADO
 
     def levantar(self):
         if self._agachado:
@@ -116,11 +114,10 @@ class Dinossauro(EntidadeDoJogo):
             self.rect = self.image.get_rect(topleft=(self.x, self.chao_y))
 
     def atualizar(self):
-        """Responsável apenas por atualizar a física (respeitando Polimorfismo e LSP)."""
         self.vel_y += self.gravidade
         self.y += self.vel_y
 
-        limite_chao = self.chao_y if not self._agachado else (LINHA_CHAO - self.obter_altura_visual())
+        limite_chao = self.chao_y if not self._agachado else (cfg.LINHA_CHAO - self.obter_altura_visual())
 
         if self.y >= limite_chao:
             self.y = limite_chao
@@ -140,27 +137,22 @@ class Obstaculo(EntidadeDoJogo):
 class Cacto(Obstaculo):
     def __init__(self, velocidade, offset_x=0):
         escala_random = random.choice([0.035, 0.040, 0.045, 0.050])
-        imagem_cacto = carregar_sprite(CACTO_IMAGE, escala=escala_random, largura_fallback=200, altura_fallback=240, max_largura=240, max_altura=240)
+        imagem_cacto = cfg.carregar_sprite(cfg.CACTO_IMAGE, escala=escala_random, largura_fallback=200, altura_fallback=240, max_largura=240, max_altura=240)
         
-        super().__init__(LARGURA_TELA + offset_x, 0, imagem_cacto, VERMELHO, velocidade)
-        
-        # POO Correta: A própria entidade ajusta seus pés exatamente na linha
-        self.y = LINHA_CHAO - self.obter_altura_visual()
+        super().__init__(cfg.LARGURA_TELA + offset_x, 0, imagem_cacto, cfg.VERMELHO, velocidade)
+        self.y = cfg.LINHA_CHAO - self.obter_altura_visual()
 
 
 class Pterodactilo(Obstaculo):
     def __init__(self, velocidade):
-        imagem_ptero = carregar_sprite(PTERO_IMAGE, escala=0.042, largura_fallback=230, altura_fallback=230, max_largura=240, max_altura=240)
+        imagem_ptero = cfg.carregar_sprite(cfg.PTERO_IMAGE, escala=0.042, largura_fallback=230, altura_fallback=230, max_largura=240, max_altura=240)
         
-        super().__init__(LARGURA_TELA, 0, imagem_ptero, AZUL, velocidade * 1.35)
+        super().__init__(cfg.LARGURA_TELA, 0, imagem_ptero, cfg.AZUL, velocidade * 1.35)
         
-        # Alinha as patrulhas relativas ao visual real do pássaro
         h_visual = self.obter_altura_visual()
-        alturas = [
-            LINHA_CHAO - h_visual - 20,
-            LINHA_CHAO - h_visual - 60,
-            LINHA_CHAO - h_visual - 100
-        ]
+        
+        # Usa as constantes para calcular as posições possiveis de voo
+        alturas = [cfg.LINHA_CHAO - h_visual - offset for offset in cfg.ALTURAS_PTERO]
         self.y = random.choice(alturas)
         self.flap = 0
 
@@ -175,9 +167,9 @@ class Pterodactilo(Obstaculo):
 
 class Projetil(EntidadeDoJogo):
     def __init__(self, x, y):
-        img_projetil = carregar_sprite(PROJETIL_IMAGE, escala=0.08, largura_fallback=20, altura_fallback=20, max_largura=30, max_altura=30)
-        super().__init__(x, y, img_projetil, AMARELO)
-        self.velocidade = 20
+        img_projetil = cfg.carregar_sprite(cfg.PROJETIL_IMAGE, escala=0.08, largura_fallback=20, altura_fallback=20, max_largura=30, max_altura=30)
+        super().__init__(x, y, img_projetil, cfg.AMARELO)
+        self.velocidade = cfg.VELOCIDADE_PROJETIL
 
     def atualizar(self):
         self.x += self.velocidade

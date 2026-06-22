@@ -3,14 +3,30 @@ import os
 
 # =====================================================================
 # ARQUIVO: configuracoes.py
-# Objetivo: Constantes globais e carregamento seguro (com CACHE) de assets.
+# Objetivo: Constantes globais, balanceamento de física e cache de assets.
 # =====================================================================
+
+# Configurações de Tela
 LARGURA_TELA = 800
 ALTURA_TELA = 400
 FPS = 60
 
-# Dificuldade e Física Global
-LINHA_CHAO = ALTURA_TELA - 30  # Altura padronizada para os pés de todas as entidades
+# =====================================================================
+# GAMEPLAY E FÍSICA (Remoção de Magic Numbers)
+# =====================================================================
+LINHA_CHAO = ALTURA_TELA - 30
+GRAVIDADE = 1.6
+FORCA_PULO = -21
+QUEDA_AGACHADO = 4
+VELOCIDADE_BASE_JOGO = 8.0
+INCREMENTO_VELOCIDADE = 1.2
+PONTOS_PARA_ACELERAR = 350
+TEMPO_RECARGA_ESPECIAL = 250
+VELOCIDADE_PROJETIL = 20
+
+# Offsets ajustados: 15 (força pular) e 50 (força agachar)
+# Removemos a altura de 100 para que o jogador nunca possa "passar direto"
+ALTURAS_PTERO = [15, 50]  
 
 # Cores (RGB)
 BRANCO = (255, 255, 255)
@@ -38,17 +54,14 @@ PTERO_IMAGE = os.path.join(ASSETS_DIR, "Pterodáctilo.png")
 ARQUIVO_SAVE = os.path.join(BASE_DIR, 'save_dino.json')
 
 # =====================================================================
-# CACHE DE IMAGENS (Resolve o problema de travamento)
+# CACHE DE IMAGENS
 # =====================================================================
 _CACHE_IMAGENS = {}
 
 def carregar_sprite(caminho, escala=1.0, largura_fallback=50, altura_fallback=50, max_largura=None, max_altura=None):
     """Carrega imagem de sprite com sistema de cache para evitar lag I/O."""
-    
-    # Cria uma chave única para o estado exato da imagem sendo solicitada
     chave_cache = (caminho, escala, max_largura, max_altura)
     
-    # Se a imagem já foi carregada e processada antes, retorna da memória (muito rápido)
     if chave_cache in _CACHE_IMAGENS:
         return _CACHE_IMAGENS[chave_cache]
         
@@ -70,7 +83,6 @@ def carregar_sprite(caminho, escala=1.0, largura_fallback=50, altura_fallback=50
                 nova_altura = max(1, int(imagem.get_height() * fator))
                 imagem = pygame.transform.smoothscale(imagem, (nova_largura, nova_altura))
 
-            # Salva no cache antes de retornar
             _CACHE_IMAGENS[chave_cache] = imagem
             return imagem
         except Exception as e:
@@ -78,7 +90,7 @@ def carregar_sprite(caminho, escala=1.0, largura_fallback=50, altura_fallback=50
     else:
         print(f"[AVISO] Imagem não encontrada: '{caminho}'.")
 
-    # Fallback caso dê erro
+    # Fallback
     superficie = pygame.Surface((largura_fallback, altura_fallback), pygame.SRCALPHA)
     pygame.draw.rect(superficie, VERMELHO, (0, 0, largura_fallback, altura_fallback), border_radius=4)
     _CACHE_IMAGENS[chave_cache] = superficie
