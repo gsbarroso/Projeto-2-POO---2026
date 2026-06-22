@@ -243,7 +243,7 @@ class Projetil(EntidadeDoJogo):
             x: Posição X inicial
             y: Posição Y inicial
         """
-        caminho_proj = cfg.ASSETS_DIR / "Shuriken_proj.png"
+        caminho_proj = cfg.ASSETS_DIR / "Projetil.png"
         imagem = cfg.carregar_sprite(str(caminho_proj), escala=0.03,
                                     largura_fallback=50, altura_fallback=50)
         
