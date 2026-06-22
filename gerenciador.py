@@ -5,37 +5,19 @@ from configuracoes import *
 from entidades import Dinossauro, Cacto, Pterodactilo, Projetil
 from persistencia import BancoDeDados
 
-# =====================================================================
-# EXCEÇÕES CUSTOMIZADAS
-# =====================================================================
 class SaldoInsuficienteError(Exception): pass
 
 # =====================================================================
-# 1. MODELO (M) - Responsável por estado e lógica do jogo
+# 1. MODELO (M)
 # =====================================================================
 class JogoModel:
-    """Modelo MVC - Gerencia estado do jogo, jogador e lógica de negócios.
-    
-    Mantém:
-    - Dados do jogador (moedas, dinos, itens)
-    - Estado atual (MENU, LOJA, JOGANDO, PAUSADO, GAME_OVER)
-    - Entidades (dino, obstáculos, projéteis)
-    - Sistema de pontuação e dificuldade
-    
-    Não renderiza nem processa input diretamente (responsabilidade de View/Controller).
-    """
-    
     def __init__(self):
-        """Inicializa modelo carregando dados persistidos e estado inicial."""
         self.dados_jogador = BancoDeDados.carregar_dados()
         self.estado = "MENU"
         self.menu_opcao = 0
         self.mensagem_erro = ""
         
-        # LOJA: Preços dos dinossauros
         self.loja_precos = {"classico": 0, "espadao": 100, "motoserra": 100, "shuriken": 175}
-        
-        # LOJA: Items consumíveis com preços
         self.loja_itens = {
             "vida": {"preco": 50, "nome": "Vida Extra"},
             "velocidade": {"preco": 75, "nome": "Veloc. Boost"},
@@ -44,16 +26,11 @@ class JogoModel:
         self.reiniciar_partida()
 
     def reiniciar_partida(self):
-        """Reseta estado da partida para novo jogo.
-        
-        Cria novo dinossauro e limpa todos os obstáculos e power-ups.
-        """
         self.dino = Dinossauro(self.dados_jogador["dinossauro_selecionado"])
-        self.dino.vidas += self.dados_jogador["itens_disponiveis"]["vida"]
         self.obstaculos = []
         self.projetil = None
         self.pontuacao = 0
-        self.velocidade_jogo = 8.0  # DIFICULDADE: Começa bem mais rápido
+        self.velocidade_jogo = 8.0
         self.moedas_rodada = 0
         self.timer_spawn = 0
         self.ability_timer = 0
@@ -62,31 +39,22 @@ class JogoModel:
         self.mensagem_erro = ""
 
     def comprar_item(self):
-        """Processa compra na loja (dino ou consumível).
-        
-        Raises:
-            SaldoInsuficienteError: Se jogador não tiver moedas suficientes
-        """
         self.mensagem_erro = ""
         dinos_nomes = list(self.loja_precos.keys())
         
         if self.menu_opcao < len(dinos_nomes):
-            # COMPRA: Dinossauro
             nome = dinos_nomes[self.menu_opcao]
             preco = self.loja_precos[nome]
             
             if nome in self.dados_jogador["dinossauros_desbloqueados"]:
-                # JÁ POSSUI: Apenas seleciona
                 self.dados_jogador["dinossauro_selecionado"] = nome
             else:
-                # NOVO: Verifica saldo
                 if self.dados_jogador["moedas"] < preco:
                     raise SaldoInsuficienteError(f"Faltam {preco - self.dados_jogador['moedas']} moedas!")
                 self.dados_jogador["moedas"] -= preco
                 self.dados_jogador["dinossauros_desbloqueados"].append(nome)
                 self.dados_jogador["dinossauro_selecionado"] = nome
         else:
-            # COMPRA: Consumível
             idx_item = self.menu_opcao - len(dinos_nomes)
             item_id = list(self.loja_itens.keys())[idx_item]
             info = self.loja_itens[item_id]
@@ -99,15 +67,9 @@ class JogoModel:
         BancoDeDados.salvar_dados(self.dados_jogador)
 
     def usar_consumivel(self, tipo: str) -> None:
-        """Usa consumível (vida, boost velocidade ou boost pulo).
-        
-        Args:
-            tipo (str): Tipo de consumível ('vida', 'velocidade', 'pulo')
-        """
         if self.dados_jogador["itens_disponiveis"].get(tipo, 0) > 0:
             self.dados_jogador["itens_disponiveis"][tipo] -= 1
-            if tipo == "vida":
-                self.dino.vidas += 1
+            if tipo == "vida": self.dino.vidas += 1
             elif tipo == "velocidade": 
                 self.dino.velocidade_boost = 1.4
                 self.ability_mensagem = "Velocidade Boost MAX!"
@@ -117,13 +79,7 @@ class JogoModel:
             BancoDeDados.salvar_dados(self.dados_jogador)
 
     def usar_especial(self) -> None:
-        """Ativa habilidade especial (dispara projétil se variante 'shuriken').
-        
-        Reseta timer e marca ability_ready como False até recarregar.
-        """
-        if self.dino.variante != "shuriken":
-            return
-        if not self.ability_ready or self.projetil is not None:
+        if self.dino.variante != "shuriken" or not self.ability_ready or self.projetil is not None:
             return
         self.projetil = Projetil(self.dino.rect.right, self.dino.rect.centery)
         self.ability_ready = False
@@ -131,20 +87,9 @@ class JogoModel:
         self.ability_mensagem = "Shuriken lançada!"
 
 # =====================================================================
-# 2. VISÃO (V) - Responsável pela renderização visual
+# 2. VISÃO (V)
 # =====================================================================
 class JogoView:
-    """Visão MVC - Renderiza estados do jogo na tela.
-    
-    Responsabilidades:
-    - Desenhar menu principal
-    - Desenhar loja de items
-    - Desenhar gameplay (dino, obstáculos, HUD)
-    - Desenhar overlays (pause, game over)
-    
-    NÃO altera estado do jogo (apenas View do modelo).
-    """
-    
     def __init__(self, tela):
         self.tela = tela
         pygame.font.init()
@@ -160,7 +105,6 @@ class JogoView:
         self.tela.fill(bg_cor)
 
         if m.estado == "MENU":
-            # Centraliza os textos principais para evitar problemas de formatação
             self._render_texto("DINO RUN MVC: EVOLUTION", LARGURA_TELA//2, ALTURA_TELA//2 - 60, txt_cor, self.fonte_grande, center=True)
             self._render_texto("Pressione [ESPAÇO] para Iniciar", LARGURA_TELA//2, ALTURA_TELA//2, VERDE, self.fonte, center=True)
             self._render_texto(f"Moedas: {m.dados_jogador['moedas']}", 20, 20, AMARELO, self.fonte)
@@ -191,7 +135,9 @@ class JogoView:
                 y += 30
 
         elif m.estado in ["JOGANDO", "GAME_OVER", "PAUSADO"]:
-            pygame.draw.line(self.tela, txt_cor, (0, ALTURA_TELA - 30), (LARGURA_TELA, ALTURA_TELA - 30), 2)
+            # A view não precisa mais fazer contas matemáticas complicadas de offset de máscara. 
+            # Como a POO tratou isso nos objetos, a linha do chão agora é fixa e perfeita.
+            pygame.draw.line(self.tela, txt_cor, (0, LINHA_CHAO), (LARGURA_TELA, LINHA_CHAO), 2)
             
             if m.dino.image: self.tela.blit(m.dino.image, m.dino.rect)
             for obs in m.obstaculos:
@@ -202,9 +148,12 @@ class JogoView:
             self._render_texto(f"Moedas: {m.moedas_rodada}", LARGURA_TELA - 200, 50, AMARELO, self.fonte)
             self._render_texto(f"Vidas: {m.dino.vidas}", 20, 20, VERMELHO, self.fonte)
             
-            especial_txt = "Pronto (E)" if m.ability_ready else f"{(m.ability_timer/250)*100:.0f}%"
-            self._render_texto(f"Especial: {especial_txt}", 20, 50, AZUL, self.fonte_peq)
-            if m.ability_mensagem: self._render_texto(m.ability_mensagem, 20, 70, txt_cor, self.fonte_peq)
+            if m.dino.variante != "classico":
+                especial_txt = "Pronto (E)" if m.ability_ready else f"{(m.ability_timer/250)*100:.0f}%"
+                self._render_texto(f"Especial: {especial_txt}", 20, 50, AZUL, self.fonte_peq)
+                
+            if m.ability_mensagem: 
+                self._render_texto(m.ability_mensagem, 20, 70, txt_cor, self.fonte_peq)
 
             if m.estado == "PAUSADO":
                 s = pygame.Surface((LARGURA_TELA, ALTURA_TELA), pygame.SRCALPHA)
@@ -229,22 +178,10 @@ class JogoView:
         else:
             self.tela.blit(surf, (x, y))
 
-
 # =====================================================================
-# 3. CONTROLADOR (C) - Orquestra Model e View
+# 3. CONTROLADOR (C)
 # =====================================================================
 class JogoController:
-    """Controlador MVC - Conecta Model e View, processa input.
-    
-    Fluxo principal:
-    1. Processa entrada (teclado)
-    2. Atualiza lógica (Model)
-    3. Renderiza (View)
-    4. Aguarda próximo frame
-    
-    Mantém referências para Model, View, e clock.
-    """
-    
     def __init__(self):
         pygame.init()
         tela = pygame.display.set_mode((LARGURA_TELA, ALTURA_TELA))
@@ -255,18 +192,6 @@ class JogoController:
         self.v = JogoView(tela)
 
     def _processar_inputs(self):
-        """Processa entrada do usuário (teclado e eventos).
-        
-        Eventos tratados:
-        - QUIT: Encerra programa
-        - MENU: ESPAÇO inicia, L abre loja
-        - LOJA: Navega com setas, ENTER compra, L volta
-        - JOGANDO: ESPAÇO pula, DOWN abaixa, P pausa, E usa poder
-        - GAME_OVER: R reinicia, L loja, M menu
-        
-        Returns:
-            bool: True se jogador está pressionando DOWN (abaixar)
-        """
         keys = pygame.key.get_pressed()
         abaixar = keys[pygame.K_DOWN]
         
@@ -312,136 +237,81 @@ class JogoController:
         return abaixar
 
     def _atualizar_regras(self, abaixar):
-        """Atualiza lógica do jogo a cada frame.
-        
-        Responsável por:
-        - Incrementar pontuação
-        - Aumentar dificuldade
-        - Atualizar dinossauro
-        - Spawnar obstáculos
-        - Checar colisões
-        - Finalizar partida
-        
-        Args:
-            abaixar (bool): Entrada do jogador (tecla DOWN)
-            
-        Raises:
-            Captura exceções internas para não quebrar o loop do jogo
-        """
         try:
-            # PONTUAÇÃO E DIFICULDADE
             self.m.pontuacao += 1
             
-            # DIFICULDADE LOGARÍTMICA: O jogo acelera cada vez mais rápido
             if self.m.pontuacao % 350 == 0:
                 self.m.velocidade_jogo += 1.2
 
-            # HABILIDADES ESPECIAIS: Recarrega cooldown
-            self.m.ability_timer += 1
-            if self.m.ability_timer >= 250:
-                self.m.ability_ready = True
+            if self.m.dino.variante != "classico":
+                self.m.ability_timer += 1
+                if self.m.ability_timer >= 250:
+                    self.m.ability_ready = True
 
-            # DINOSSAURO: Atualiza física e estado
-            try:
-                self.m.dino.atualizar(abaixar)
-            except Exception as e:
-                print(f"[ERRO] Falha ao atualizar dinossauro: {e}")
+            self.m.dino.processar_entrada(abaixar)
+            self.m.dino.atualizar()
 
-            # SPAWN DE OBSTÁCULOS
             self.m.timer_spawn += 1
-            rate = max(30, 90 - (self.m.velocidade_jogo * 3.5))  # Spawn absurdamente rápido no end-game
+            rate = max(30, 90 - (self.m.velocidade_jogo * 3.5))
             if self.m.timer_spawn > rate:
                 self.m.timer_spawn = 0
-                try:
-                    if random.random() < 0.6:
-                        # DIFICULDADE: Cactos nascem agrupados
-                        qtd = 3 if random.random() > 0.85 else (2 if random.random() > 0.5 else 1)
-                        for i in range(qtd):
-                            novo_cacto = Cacto(self.m.velocidade_jogo * self.m.dino.velocidade_boost, i * 35)
-                            self.m.obstaculos.append(novo_cacto)
-                    else:
-                        novo_ptero = Pterodactilo(self.m.velocidade_jogo * self.m.dino.velocidade_boost)
-                        self.m.obstaculos.append(novo_ptero)
-                except Exception as e:
-                    print(f"[ERRO] Falha ao spawnar obstáculo: {e}")
+                if random.random() < 0.6:
+                    qtd = 3 if random.random() > 0.85 else (2 if random.random() > 0.5 else 1)
+                    for i in range(qtd):
+                        novo_cacto = Cacto(self.m.velocidade_jogo * self.m.dino.velocidade_boost, i * 35)
+                        self.m.obstaculos.append(novo_cacto)
+                else:
+                    novo_ptero = Pterodactilo(self.m.velocidade_jogo * self.m.dino.velocidade_boost)
+                    self.m.obstaculos.append(novo_ptero)
 
-            # PROJÉTIL: Atualiza e testa colisão
             if self.m.projetil:
-                try:
-                    self.m.projetil.atualizar()
-                    if self.m.projetil.x > LARGURA_TELA:
-                        self.m.projetil = None
-                    else:
-                        for obs in self.m.obstaculos[:]:
-                            try:
-                                if self.m.projetil.checar_colisao(obs):
-                                    self.m.obstaculos.remove(obs)
-                                    self.m.projetil = None
-                                    self.m.ability_mensagem = "Alvo Eliminado!"
-                                    break
-                            except Exception as e:
-                                print(f"[ERRO] Erro ao testar colisão projétil: {e}")
-                except Exception as e:
-                    print(f"[ERRO] Falha ao atualizar projétil: {e}")
+                self.m.projetil.atualizar()
+                if self.m.projetil.x > LARGURA_TELA:
+                    self.m.projetil = None
+                else:
+                    for obs in self.m.obstaculos[:]:
+                        if self.m.projetil.checar_colisao(obs):
+                            self.m.obstaculos.remove(obs)
+                            self.m.projetil = None
+                            self.m.ability_mensagem = "Alvo Eliminado!"
+                            break
 
-            # OBSTÁCULOS: Atualiza e testa colisões
             for obs in self.m.obstaculos[:]:
-                try:
-                    obs.atualizar()
-                    
-                    # REMOÇÃO: Obstáculo saiu da tela (ganha moeda)
-                    if obs.rect.right < 0:
+                obs.atualizar()
+                
+                if obs.rect.right < 0:
+                    self.m.obstaculos.remove(obs)
+                    self.m.dados_jogador["moedas"] += 1
+                    self.m.moedas_rodada += 1
+                    continue
+                
+                if self.m.dino.checar_colisao(obs):
+                    if self.m.dino.variante == "motoserra" and self.m.ability_ready and isinstance(obs, Cacto):
+                        self.m.ability_ready = False
+                        self.m.ability_timer = 0
+                        self.m.ability_mensagem = "Motoserra rasgou o cacto!"
                         self.m.obstaculos.remove(obs)
-                        self.m.dados_jogador["moedas"] += 1
-                        self.m.moedas_rodada += 1
                         continue
                     
-                    # COLISÃO: Dinossauro bateu no obstáculo
-                    if self.m.dino.checar_colisao(obs):
-                        # HABILIDADE 1: Motosserra destrói cactos
-                        if self.m.dino.variante == "motoserra" and self.m.ability_ready and isinstance(obs, Cacto):
-                            self.m.ability_ready = False
-                            self.m.ability_timer = 0
-                            self.m.ability_mensagem = "Motoserra rasgou o cacto!"
-                            self.m.obstaculos.remove(obs)
-                            continue
-                        
-                        # HABILIDADE 2: Espadão destrói pterodáctilos
-                        if self.m.dino.variante == "espadao" and self.m.ability_ready and isinstance(obs, Pterodactilo):
-                            self.m.ability_ready = False
-                            self.m.ability_timer = 0
-                            self.m.ability_mensagem = "Espadão fatiou o ptero!"
-                            self.m.obstaculos.remove(obs)
-                            continue
+                    if self.m.dino.variante == "espadao" and self.m.ability_ready and isinstance(obs, Pterodactilo):
+                        self.m.ability_ready = False
+                        self.m.ability_timer = 0
+                        self.m.ability_mensagem = "Espadão fatiou o ptero!"
+                        self.m.obstaculos.remove(obs)
+                        continue
 
-                        # DANO: Diminui vidas ou game over
-                        if self.m.dino.vidas > 1:
-                            self.m.dino.vidas -= 1
-                            self.m.obstaculos.remove(obs)
-                        else:
-                            # FIM DO JOGO
-                            self.m.estado = "GAME_OVER"
-                            self.m.dados_jogador["pontos_acumulados"] += self.m.pontuacao
-                            try:
-                                BancoDeDados.salvar_dados(self.m.dados_jogador)
-                            except Exception as e:
-                                print(f"[ERRO] Falha ao salvar dados no game over: {e}")
-                except Exception as e:
-                    print(f"[ERRO] Erro durante processamento de obstáculo: {e}")
+                    if self.m.dino.vidas > 1:
+                        self.m.dino.vidas -= 1
+                        self.m.obstaculos.remove(obs)
+                    else:
+                        self.m.estado = "GAME_OVER"
+                        self.m.dados_jogador["pontos_acumulados"] += self.m.pontuacao
+                        BancoDeDados.salvar_dados(self.m.dados_jogador)
                     
         except Exception as e:
             print(f"[ERRO CRÍTICO] Falha geral em _atualizar_regras: {e}")
 
     def executar(self):
-        """Loop principal do jogo.
-        
-        Mantém o jogo rodando indefinidamente até QUIT ou erro fatal.
-        Executa a cada frame:
-        1. Processa input
-        2. Atualiza lógica (se JOGANDO)
-        3. Renderiza tela
-        4. Aguarda frame time (FPS)
-        """
         while True:
             try:
                 abaixar = self._processar_inputs()
@@ -450,8 +320,6 @@ class JogoController:
                 self.v.renderizar(self.m)
                 self.relogio.tick(FPS)
             except SystemExit:
-                # QUIT pressionado: sair normalmente
                 break
             except Exception as e:
-                # ERRO: Log e continue (não trava o jogo)
                 print(f"[ERRO] Exceção no loop principal: {e}")
